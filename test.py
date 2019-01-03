@@ -1,23 +1,35 @@
 # -*- coding : utf-8 -*-
 import urllib.request
 import re
+import os
+from urllib.parse import quote
+
 from bs4 import BeautifulSoup
 
 
 class Ebook():
+    '''init data'''
 
     def __int__(self, type):
         self.info = 'Ebook'
         self.type = type
+        self.book_list = []
+        self.fileDir = 'D:\\EBook'
+
+    '''try url to web page'''
 
     def get_html(self, url):
         page = urllib.request.urlopen(url)
         return page.read().decode('utf-8', errors='replace')
 
+    '''write data in file'''
+
     def write_booklist(self, file, booklist):
         pageFile = open(file, 'w')
         pageFile.write(booklist)
         pageFile.close()
+
+    '''find book list in web page'''
 
     def analysis_booklist(self, htmlcode):
         print('start analysis_booklist')
@@ -32,47 +44,63 @@ class Ebook():
                 html_book_list.append(book_href)
         return html_book_list
 
+    '''find download page in book item page'''
+
     def analysis_book(self, htmlcode):
         print('start analysis_book')
-        soup = BeautifulSoup(htmlcode, 'html.parser')
+        soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
         module = soup.find_all('a', id='read_book')
-        html_book_downs = []
         for item in module:
             web = item.get('href')
             result = re.match('(/\w+)+.html', web)
             if result:
-                html_book_downs.append(web)
-        return html_book_downs
+                self.book_list.append('http://www.80txt.com' + str(web))
+
+    '''find download zip file in download page'''
 
     def analysis_down(self, htmlcode):
         print('start analysis_down')
-        soup = BeautifulSoup(htmlcode, 'html.parser')
-        downlist = soup.find_all('div', class_='pan_url')
-        print(str(downlist))
-        list = []
-        for download in downlist:
-            down_item = BeautifulSoup(str(download), 'html.parser')
-            down_path = down_item.find('a').get('href')
-            print(str(down_path))
+        soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
+        down_list = soup.find_all('a', target='_blank')
+        for download in down_list:
             if self.type == 0:
-                print(down_path[0])
-                list.append(down_path[0])
+                result = re.match('https://\w+.80txt.com(/\w+)+/[^\x00-\xff]+.zip', download.get('href'))
+                if result:
+                    return download.get('href')
             else:
-                list.append(down_path[1])
-        return list
+                result = re.match('https://\w+.80txt.com(/\w+)+/[^\x00-\xff]+.txt', download.get('href'))
+                if result:
+                    return download.get('href')
+        return None
+
+    '''download file in self.fileDir'''
+
+    def download_file(self, filePath):
+        fileName = filePath.split('/')[-1]
+
+        if not os.path.exists(self.fileDir):
+            os.makedirs(self.fileDir)
+        if not os.path.exists(self.fileDir + '\\' + fileName.split('.')[0]):
+            os.makedirs(self.fileDir + '\\' + fileName.split('.')[0])
+            res = quote(fileName, encoding='utf-8')
+            print('加载数据:' + fileName)
+            data = urllib.request.urlopen(filePath.replace(fileName, res)).read()
+            with open(self.fileDir + '\\' + fileName.split('.')[0] + '\\' + fileName, 'wb') as file:
+                file.write(data)
+            print('已下载:' + fileName)
+        else:
+            print('已存在:' + fileName.split('.')[0])
 
 
 eBook = Ebook()
 eBook.__int__(0)
-html = eBook.get_html('https://www.80txt.com/sort/89.html')
-book_list = eBook.analysis_booklist(html)
-print('book_list size ' + str(book_list.__sizeof__()))
-download_htmlList = []
-for book in book_list:
-    print(str(book))
-    book_web = eBook.get_html(book)
-    download_list = eBook.analysis_book(book_web)
-    for download in download_list:
-        download_htmlList.append('http://www.80txt.com/' + str(download))
-print(str(download_htmlList))
-
+for i in range(0, 10):
+    html = eBook.get_html('https://www.80txt.com/sort/' + str(i) + '.html')
+    book_list = eBook.analysis_booklist(html)
+    for book in book_list:
+        print(str(book))
+        eBook.analysis_book(book)
+for download_htmlList in eBook.book_list:
+    download_page = eBook.analysis_down(download_htmlList)
+    if download_page:
+        eBook.download_file(str(download_page))
