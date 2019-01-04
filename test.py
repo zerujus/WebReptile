@@ -2,13 +2,14 @@
 import urllib.request
 import re
 import os
+from concurrent.futures.thread import ThreadPoolExecutor
 from urllib.parse import quote
 
 from bs4 import BeautifulSoup
 
 
 class Ebook():
-    '''init data'''
+    """init data"""
 
     def __int__(self, type):
         self.info = 'Ebook'
@@ -42,7 +43,10 @@ class Ebook():
             result = re.match('https://www.80txt.com(/\w+)+.html', book_href)
             if result:
                 html_book_list.append(book_href)
-        return html_book_list
+        if html_book_list.__sizeof__() == 0:
+            return None
+        else:
+            return html_book_list
 
     '''find download page in book item page'''
 
@@ -50,11 +54,16 @@ class Ebook():
         print('start analysis_book')
         soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
         module = soup.find_all('a', id='read_book')
+        book_down_list = []
         for item in module:
             web = item.get('href')
             result = re.match('(/\w+)+.html', web)
             if result:
-                self.book_list.append('http://www.80txt.com' + str(web))
+                book_down_list.append('http://www.80txt.com' + str(web))
+        if book_down_list.__sizeof__() == 0:
+            return None
+        else:
+            return book_down_list
 
     '''find download zip file in download page'''
 
@@ -91,16 +100,21 @@ class Ebook():
         else:
             print('已存在:' + fileName.split('.')[0])
 
+    def thread_bookList(self, book):
+        print(str(book))
+        download_htmlList = eBook.analysis_book(book)
+        if not download_htmlList is None:
+            for download_web in download_htmlList:
+                download_page = eBook.analysis_down(download_web)
+                if download_page:
+                    eBook.download_file(download_page)
 
 eBook = Ebook()
 eBook.__int__(0)
+pool = ThreadPoolExecutor(max_workers=7)
 for i in range(0, 10):
     html = eBook.get_html('https://www.80txt.com/sort/' + str(i) + '.html')
     book_list = eBook.analysis_booklist(html)
-    for book in book_list:
-        print(str(book))
-        eBook.analysis_book(book)
-for download_htmlList in eBook.book_list:
-    download_page = eBook.analysis_down(download_htmlList)
-    if download_page:
-        eBook.download_file(str(download_page))
+    if not book_list is None:
+        for book in book_list:
+            pool.submit(eBook.thread_bookList, book)
