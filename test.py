@@ -109,6 +109,26 @@ class Ebook():
                 if result:
                     self.pool.submit(self.thread_bookList, a.get('href'))
 
+    def bookList_outOfOrder(self, htmlcode):
+        print('bookList_outOfOrder')
+        soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
+        div = soup.find_all('a')
+        if div:
+            for book in div:
+                result = re.match('https://www.80txt.com(/\w+)+.html', book.get('href'))
+                if result:
+                    self.pool.submit(self.thread_bookList, book.get('href'))
+                self.book_chooseAll(book.get('href'))
+
+    def book_chooseAll(self, htmlcode):
+        soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
+        div = soup.find_all('a')
+        if div:
+            for book in div:
+                result = re.match('https://www.80txt.com(/\w+)+.html', book.get('href'))
+                if result:
+                    self.pool.submit(self.thread_bookList, book.get('href'))
+
 '''eBook = Ebook()
 eBook.__int__(0)
 pool = ThreadPoolExecutor(max_workers=7)
@@ -121,7 +141,4 @@ for i in range(0, 10):
 
 Ebook = Ebook()
 Ebook.__int__(0, 7)
-Ebook.bookList_recommend('https://www.80txt.com/')
-'''soup = BeautifulSoup(Ebook.get_html('https://www.80txt.com/txtxz/556.html'), 'html.parser')
-module = soup.find_all('a', id='read_book')
-print(str(module))'''
+Ebook.bookList_outOfOrder('https://www.80txt.com/')
