@@ -11,11 +11,12 @@ from bs4 import BeautifulSoup
 class Ebook():
     """init data"""
 
-    def __int__(self, type):
+    def __int__(self, type, thread):
         self.info = 'Ebook'
         self.type = type
         self.book_list = []
         self.fileDir = 'D:\\EBook'
+        self.max_thread = thread
 
     '''try url to web page'''
 
@@ -54,16 +55,12 @@ class Ebook():
         print('start analysis_book')
         soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
         module = soup.find_all('a', id='read_book')
-        book_down_list = []
         for item in module:
             web = item.get('href')
             result = re.match('(/\w+)+.html', web)
             if result:
-                book_down_list.append('http://www.80txt.com' + str(web))
-        if book_down_list.__sizeof__() == 0:
-            return None
-        else:
-            return book_down_list
+                return 'http://www.80txt.com' + str(web)
+        return None
 
     '''find download zip file in download page'''
 
@@ -102,14 +99,25 @@ class Ebook():
 
     def thread_bookList(self, book):
         print(str(book))
-        download_htmlList = eBook.analysis_book(book)
-        if not download_htmlList is None:
-            for download_web in download_htmlList:
-                download_page = eBook.analysis_down(download_web)
-                if download_page:
-                    eBook.download_file(download_page)
+        book_down = self.analysis_book(book)
+        if book_down:
+            book_path = self.analysis_down(book_down)
+            if book_path:
+                self.download_file(book_path)
 
-eBook = Ebook()
+    '''search ebook by annunciation'''
+    def bookList_annunciation(self, htmlcode):
+        print('bookList_annunciation')
+        pool = ThreadPoolExecutor(max_workers=self.max_thread)
+        soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
+        slist = soup.find('div', id='slist')
+        if slist is not None:
+            bookList_introduction = slist.find_all('a', target='_blank')
+            for book_introduction in bookList_introduction:
+                pool.submit(self.thread_bookList, book_introduction.get('href'))
+
+
+'''eBook = Ebook()
 eBook.__int__(0)
 pool = ThreadPoolExecutor(max_workers=7)
 for i in range(0, 10):
@@ -117,4 +125,8 @@ for i in range(0, 10):
     book_list = eBook.analysis_booklist(html)
     if not book_list is None:
         for book in book_list:
-            pool.submit(eBook.thread_bookList, book)
+            pool.submit(eBook.thread_bookList, book)'''
+
+Ebook = Ebook()
+Ebook.__int__(0, 7)
+Ebook.bookList_annunciation('https://www.80txt.com/sort/23.html')
