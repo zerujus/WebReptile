@@ -52,7 +52,7 @@ class Ebook():
         soup = BeautifulSoup(self.get_html(htmlcode), 'html.parser')
         down_list = soup.find_all('a', target='_blank')
         for download in down_list:
-            if self.type == 0:
+            if self.type == '1':
                 result = re.match('https://\w+.80txt.com(/\w+)+/[^\x00-\xff]+.zip', download.get('href'))
                 if result:
                     return download.get('href')
@@ -129,16 +129,26 @@ class Ebook():
                 if result:
                     self.pool.submit(self.thread_bookList, book.get('href'))
 
-'''eBook = Ebook()
-eBook.__int__(0)
-pool = ThreadPoolExecutor(max_workers=7)
-for i in range(0, 10):
-    html = eBook.get_html('https://www.80txt.com/sort/' + str(i) + '.html')
-    book_list = eBook.analysis_booklist(html)
-    if not book_list is None:
-        for book in book_list:
-            pool.submit(eBook.thread_bookList, book)'''
+print("欢迎使用小虫下载爬虫：")
+book = Ebook()
 
-Ebook = Ebook()
-Ebook.__int__(0, 7)
-Ebook.bookList_outOfOrder('https://www.80txt.com/')
+val = input('请选择下载模式：\n 1:依据榜单下载\n 2:推荐下载\n 3:乱序下载\n')
+type = input('请选择下载格式: \n 1.zip\n 2.txt\n')
+thread = input('请输入开启线程数: ')
+book.__int__(type, int(thread))
+if val == '1':
+    html = input('请输入榜单首页：\n')
+    num = input('请输入爬取页数: \n')
+    htmlspit = html[:-6]
+    for i in range(1, int(num) + 1):
+        s = htmlspit + str(i) + '.html'
+        print(s)
+        book.bookList_annunciation(htmlspit + str(i) + '.html')
+elif val == '2':
+    html = 'https://www.80txt.com/'
+    book.bookList_recommend(html)
+elif val == '3':
+    html = 'https://www.80txt.com/'
+    book.bookList_outOfOrder(html)
+
+
